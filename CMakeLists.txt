@@ -8,6 +8,13 @@ else()
     set(_z3_is_top_level FALSE)
 endif()
 
+if(NOT DEFINED CMAKE_INSTALL_INCLUDEDIR)
+    set(CMAKE_INSTALL_INCLUDEDIR "include" CACHE PATH "Header install directory")
+endif()
+if(NOT DEFINED CMAKE_INSTALL_LIBDIR)
+    set(CMAKE_INSTALL_LIBDIR "lib" CACHE PATH "Library install directory")
+endif()
+
 include(GNUInstallDirs)
 
 option(Z3_INSTALL "Install the wdk-z3 CMake package" "${_z3_is_top_level}")
