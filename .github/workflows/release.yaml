@@ -1,0 +1,105 @@
+name: package
+
+on:
+  push:
+    branches:
+      - "**"
+    tags:
+      - "v*"
+  pull_request:
+    branches:
+      - "**"
+
+env:
+  Z3_VERSION: 4.16.0
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v5
+
+      - name: validate tag
+        if: github.ref_type == 'tag'
+        shell: bash
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          if [[ "${TAG_VERSION}" != "${Z3_VERSION}" ]]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match Z3_VERSION ${Z3_VERSION}"
+            exit 1
+          fi
+
+      - name: verify package contents
+        shell: bash
+        run: |
+          test -f include/z3.h
+          test -f include/z3_api.h
+          test -f include/z3_version.h
+          test -f include/stdbool.h
+          test -f include/stdint.h
+          test -f lib/amd64/z3.lib
+          test -f lib/i386/z3.lib
+          test ! -d bin
+          test ! -d .local-tests
+          if find . \( -name '*.dll' -o -name '*.exe' -o -name '*.pdb' \) -print -quit | grep -q .; then
+            echo "::error::runtime or build binaries must not be committed"
+            exit 1
+          fi
+
+      - name: configure
+        run: cmake -S . -B build -DZ3_INSTALL=ON
+
+      - name: install
+        run: cmake --install build --prefix install
+
+      - name: verify installed package
+        shell: bash
+        run: |
+          test -f install/include/z3.h
+          test -f install/include/z3_api.h
+          test -f install/include/z3_version.h
+          test -f install/include/stdbool.h
+          test -f install/include/stdint.h
+          test -f install/lib/amd64/z3.lib
+          test -f install/lib/i386/z3.lib
+          test -f install/lib/cmake/z3/z3Config.cmake
+          test -f install/lib/cmake/z3/z3ConfigVersion.cmake
+          if find install \( -name '*.dll' -o -name '*.exe' -o -name '*.pdb' \) -print -quit | grep -q .; then
+            echo "::error::runtime or build binaries must not be installed"
+            exit 1
+          fi
+
+      - name: verify find_package
+        shell: bash
+        run: |
+          mkdir smoke
+          cat > smoke/CMakeLists.txt <<'EOF'
+          cmake_minimum_required(VERSION 3.20)
+          project(z3_smoke LANGUAGES NONE)
+          find_package(z3 4.16.0 EXACT CONFIG REQUIRED)
+          if(NOT TARGET z3::z3)
+            message(FATAL_ERROR "Missing target: z3::z3")
+          endif()
+          get_target_property(location z3::z3 IMPORTED_LOCATION)
+          if(NOT location MATCHES "/lib/${EXPECTED_ARCH}/z3\\.lib$")
+            message(FATAL_ERROR "Unexpected z3::z3 location: ${location}")
+          endif()
+          EOF
+          cmake -S smoke -B smoke-amd64 -DCMAKE_PREFIX_PATH="${GITHUB_WORKSPACE}/install" -DZ3_ARCH=amd64 -DEXPECTED_ARCH=amd64
+          cmake -S smoke -B smoke-i386 -DCMAKE_PREFIX_PATH="${GITHUB_WORKSPACE}/install" -DZ3_ARCH=i386 -DEXPECTED_ARCH=i386
+
+  release:
+    needs: package
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: create release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
+          draft: false
+          prerelease: false

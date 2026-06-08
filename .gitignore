@@ -1,4 +1,4 @@
-.local-tests/*-build*/
+.local-tests/
 local-runtime/
 bin/
 build*/
