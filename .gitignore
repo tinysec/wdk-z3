@@ -1,0 +1,10 @@
+.local-tests/*-build*/
+local-runtime/
+bin/
+build*/
+out/
+*.dll
+*.exe
+*.pdb
+*.user
+*.suo
