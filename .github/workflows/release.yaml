@@ -47,6 +47,25 @@ jobs:
             exit 1
           fi
 
+      - name: verify import libraries
+        shell: bash
+        run: |
+          if ! command -v llvm-readobj >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y llvm
+          fi
+          for lib in lib/amd64/z3.lib lib/i386/z3.lib; do
+            imports="$(llvm-readobj --coff-imports "${lib}")"
+            if grep -q "Name type: ordinal" <<<"${imports}"; then
+              echo "::error::${lib} imports by ordinal"
+              exit 1
+            fi
+            if ! grep -Eq "Name type: (name|noprefix)" <<<"${imports}"; then
+              echo "::error::${lib} does not contain name imports"
+              exit 1
+            fi
+          done
+
       - name: configure
         run: cmake -S . -B build -DZ3_INSTALL=ON
 
