@@ -2,22 +2,8 @@ cmake_minimum_required(VERSION 3.20)
 
 project(z3 VERSION 4.16.0 LANGUAGES NONE)
 
-if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
-    set(_z3_is_top_level TRUE)
-else()
-    set(_z3_is_top_level FALSE)
-endif()
-
-if(NOT DEFINED CMAKE_INSTALL_INCLUDEDIR)
-    set(CMAKE_INSTALL_INCLUDEDIR "include" CACHE PATH "Header install directory")
-endif()
-if(NOT DEFINED CMAKE_INSTALL_LIBDIR)
-    set(CMAKE_INSTALL_LIBDIR "lib" CACHE PATH "Library install directory")
-endif()
-
-include(GNUInstallDirs)
-
-option(Z3_INSTALL "Install the wdk-z3 CMake package" "${_z3_is_top_level}")
+# This package is consumed via FetchContent / add_subdirectory and exposes the
+# z3::z3 target. It deliberately has no install() support.
 set(Z3_ARCH "" CACHE STRING "Z3 binary arch override (amd64|i386); empty follows WDK7_ARCH or pointer size")
 set_property(CACHE Z3_ARCH PROPERTY STRINGS "" amd64 i386)
 set(Z3_RUNTIME_DLL "" CACHE FILEPATH "Optional external z3.dll path used by z3_copy_runtime()")
@@ -94,33 +80,3 @@ function(z3_copy_runtime target_name)
             "${_z3_runtime_dll}"
             "$<TARGET_FILE_DIR:${target_name}>/z3.dll")
 endfunction()
-
-if(Z3_INSTALL)
-    install(
-        DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/"
-        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
-
-    install(
-        DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/lib/"
-        DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-        FILES_MATCHING
-            PATTERN "*.lib")
-
-    include(CMakePackageConfigHelpers)
-
-    write_basic_package_version_file(
-        "${PROJECT_BINARY_DIR}/z3ConfigVersion.cmake"
-        VERSION "${PROJECT_VERSION}"
-        COMPATIBILITY SameMajorVersion)
-
-    configure_package_config_file(
-        "${PROJECT_SOURCE_DIR}/cmake/Config.cmake.in"
-        "${PROJECT_BINARY_DIR}/z3Config.cmake"
-        INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/z3")
-
-    install(
-        FILES
-            "${PROJECT_BINARY_DIR}/z3Config.cmake"
-            "${PROJECT_BINARY_DIR}/z3ConfigVersion.cmake"
-        DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/z3")
-endif()
