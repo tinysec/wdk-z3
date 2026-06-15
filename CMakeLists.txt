@@ -20,7 +20,7 @@ include(GNUInstallDirs)
 option(Z3_INSTALL "Install the wdk-z3 CMake package" "${_z3_is_top_level}")
 set(Z3_ARCH "" CACHE STRING "Z3 binary arch override (amd64|i386); empty follows WDK7_ARCH or pointer size")
 set_property(CACHE Z3_ARCH PROPERTY STRINGS "" amd64 i386)
-set(Z3_RUNTIME_DLL "" CACHE FILEPATH "Optional external libz3.dll path used by z3_copy_runtime()")
+set(Z3_RUNTIME_DLL "" CACHE FILEPATH "Optional external z3.dll path used by z3_copy_runtime()")
 
 function(_z3_normalize_arch out_var input_arch)
     if(input_arch STREQUAL "x64")
@@ -84,7 +84,7 @@ function(z3_copy_runtime target_name)
 
     get_target_property(_z3_runtime_dll z3::z3 Z3_RUNTIME_DLL)
     if(NOT _z3_runtime_dll)
-        message(FATAL_ERROR "Set -DZ3_RUNTIME_DLL=/path/to/libz3.dll before calling z3_copy_runtime().")
+        message(FATAL_ERROR "Set -DZ3_RUNTIME_DLL=/path/to/z3.dll before calling z3_copy_runtime().")
     endif()
 
     add_custom_command(
@@ -92,7 +92,7 @@ function(z3_copy_runtime target_name)
         POST_BUILD
         COMMAND "${CMAKE_COMMAND}" -E copy_if_different
             "${_z3_runtime_dll}"
-            "$<TARGET_FILE_DIR:${target_name}>/libz3.dll")
+            "$<TARGET_FILE_DIR:${target_name}>/z3.dll")
 endfunction()
 
 if(Z3_INSTALL)

@@ -14,7 +14,7 @@ packages Z3 `4.16.0`.
 ## Features
 
 - WDK 7 friendly Z3 C API headers.
-- `amd64` and `i386` `z3.lib` import libraries for `libz3.dll`.
+- `amd64` and `i386` `z3.lib` import libraries for `z3.dll`.
 - CMake package target: `z3::z3`.
 - No bundled Z3 source tree.
 - No runtime DLLs committed to git.
@@ -49,7 +49,7 @@ The selected architecture follows `WDK7_ARCH`; otherwise pass
 If CMake should copy an external runtime DLL next to an executable:
 
 ```cmake
-set(Z3_RUNTIME_DLL "D:/path/to/libz3.dll" CACHE FILEPATH "")
+set(Z3_RUNTIME_DLL "D:/path/to/z3.dll" CACHE FILEPATH "")
 target_link_libraries(your_target PRIVATE z3::z3)
 z3_copy_runtime(your_target)
 ```
