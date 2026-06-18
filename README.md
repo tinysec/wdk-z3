@@ -8,8 +8,9 @@
 ## Introduction
 
 `wdk-z3` is a WDK 7 compatible header and import-library package for the
-Z3 C API. Repository tags follow upstream Z3 versions; for example, `v4.16.0`
-packages Z3 `4.16.0`.
+Z3 C API. Exact build tags include the GitHub Actions build number, such as
+`v4.16.0.123`. The floating tag `v4.16.0` is an alias for the latest exact
+build tag for Z3 `4.16.0`.
 
 ## Features
 

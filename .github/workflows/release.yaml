@@ -3,15 +3,17 @@ name: package
 on:
   push:
     branches:
-      - "**"
-    tags:
-      - "v*"
+      - master
   pull_request:
     branches:
       - "**"
 
 env:
   Z3_VERSION: 4.16.0
+  FLOATING_TAG: v4.16.0
+
+permissions:
+  contents: write
 
 jobs:
   package:
@@ -19,16 +21,6 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v5
-
-      - name: validate tag
-        if: github.ref_type == 'tag'
-        shell: bash
-        run: |
-          TAG_VERSION="${GITHUB_REF_NAME#v}"
-          if [[ "${TAG_VERSION}" != "${Z3_VERSION}" ]]; then
-            echo "::error::Tag ${GITHUB_REF_NAME} does not match Z3_VERSION ${Z3_VERSION}"
-            exit 1
-          fi
 
       - name: verify package contents
         shell: bash
@@ -110,15 +102,42 @@ jobs:
 
   release:
     needs: package
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
-      - name: create release
-        uses: softprops/action-gh-release@v1
+      - name: checkout
+        uses: actions/checkout@v5
         with:
-          tag_name: ${{ github.ref_name }}
-          generate_release_notes: true
-          draft: false
-          prerelease: false
+          fetch-depth: 0
+
+      - name: publish versioned build and floating aliases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          BUILD_VERSION="${Z3_VERSION}.${GITHUB_RUN_NUMBER}"
+          BUILD_TAG="v${BUILD_VERSION}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git tag "${BUILD_TAG}" "${GITHUB_SHA}"
+          git push origin "refs/tags/${BUILD_TAG}"
+
+          gh release create "${BUILD_TAG}" \
+            --title "${BUILD_TAG}" \
+            --latest \
+            --generate-notes
+
+          gh release delete "${FLOATING_TAG}" --yes || true
+          git push origin ":refs/tags/${FLOATING_TAG}" || true
+
+          git tag -f "${FLOATING_TAG}" "${GITHUB_SHA}"
+          git push origin "refs/tags/${FLOATING_TAG}"
+
+          gh release create "${FLOATING_TAG}" \
+            --title "${FLOATING_TAG}" \
+            --latest=false \
+            --notes "Floating wdk-z3 ${Z3_VERSION} release. Always points to the latest build (${BUILD_TAG})."
