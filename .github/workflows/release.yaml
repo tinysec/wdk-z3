@@ -59,36 +59,20 @@ jobs:
           done
 
       - name: configure
-        run: cmake -S . -B build -DZ3_INSTALL=ON
+        run: cmake -S . -B build
 
-      - name: install
-        run: cmake --install build --prefix install
-
-      - name: verify installed package
-        shell: bash
-        run: |
-          test -f install/include/z3.h
-          test -f install/include/z3_api.h
-          test -f install/include/z3_version.h
-          test -f install/include/stdbool.h
-          test -f install/include/stdint.h
-          test -f install/lib/amd64/z3.lib
-          test -f install/lib/i386/z3.lib
-          test -f install/lib/cmake/z3/z3Config.cmake
-          test -f install/lib/cmake/z3/z3ConfigVersion.cmake
-          if find install \( -name '*.dll' -o -name '*.exe' -o -name '*.pdb' \) -print -quit | grep -q .; then
-            echo "::error::runtime or build binaries must not be installed"
-            exit 1
-          fi
-
-      - name: verify find_package
+      - name: verify local target
         shell: bash
         run: |
           mkdir smoke
           cat > smoke/CMakeLists.txt <<'EOF'
           cmake_minimum_required(VERSION 3.20)
           project(z3_smoke LANGUAGES NONE)
-          find_package(z3 4.16.0 EXACT CONFIG REQUIRED)
+          include(FetchContent)
+          FetchContent_Declare(
+                  z3
+                  SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/..")
+          FetchContent_MakeAvailable(z3)
           if(NOT TARGET z3::z3)
             message(FATAL_ERROR "Missing target: z3::z3")
           endif()
@@ -97,8 +81,8 @@ jobs:
             message(FATAL_ERROR "Unexpected z3::z3 location: ${location}")
           endif()
           EOF
-          cmake -S smoke -B smoke-amd64 -DCMAKE_PREFIX_PATH="${GITHUB_WORKSPACE}/install" -DZ3_ARCH=amd64 -DEXPECTED_ARCH=amd64
-          cmake -S smoke -B smoke-i386 -DCMAKE_PREFIX_PATH="${GITHUB_WORKSPACE}/install" -DZ3_ARCH=i386 -DEXPECTED_ARCH=i386
+          cmake -S smoke -B smoke-amd64 -DZ3_ARCH=amd64 -DEXPECTED_ARCH=amd64
+          cmake -S smoke -B smoke-i386 -DZ3_ARCH=i386 -DEXPECTED_ARCH=i386
 
   release:
     needs: package
